@@ -19,7 +19,6 @@ public class UserEntity {
 
     private String password;
 
-    @Enumerated(EnumType.STRING)
-    private Authority partner;
+    private boolean partner;
 
 }

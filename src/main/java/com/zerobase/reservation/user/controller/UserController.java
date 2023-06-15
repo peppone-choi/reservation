@@ -9,7 +9,6 @@ import com.zerobase.reservation.user.exception.UserNotFoundException;
 import com.zerobase.reservation.user.model.ResponseError;
 import com.zerobase.reservation.user.model.UserInput;
 import com.zerobase.reservation.user.model.UserLoginToken;
-import com.zerobase.reservation.user.model.constants.Authority;
 import com.zerobase.reservation.user.repository.UserRepository;
 import com.zerobase.reservation.util.PasswordUtils;
 import lombok.AllArgsConstructor;
@@ -59,7 +58,7 @@ public class UserController {
         UserEntity user = UserEntity.builder()
                 .email(userInput.getEmail())
                 .password(encryptPassword)
-                .partner(Authority.ROLE_MEMBER)
+                .partner(false)
                 .build();
         userRepository.save(user);
 
@@ -86,7 +85,7 @@ public class UserController {
         UserEntity user = UserEntity.builder()
                 .email(userInput.getEmail())
                 .password(encryptPassword)
-                .partner(Authority.ROLE_PARTNER)
+                .partner(true)
                 .build();
         userRepository.save(user);
 
@@ -115,8 +114,7 @@ public class UserController {
 
         String token = JWT.create()
                 .withExpiresAt(expairedDate)
-                .withClaim("user_id", user.getEmail())
-                .withClaim("role", user.getPartner().toString())
+                .withClaim("email", user.getEmail())
                 .withSubject(user.getEmail())
                 .withIssuer(user.getEmail())
                 .sign(Algorithm.HMAC512("geronimo".getBytes()));
