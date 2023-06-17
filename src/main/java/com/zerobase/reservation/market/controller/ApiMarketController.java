@@ -1,5 +1,6 @@
 package com.zerobase.reservation.market.controller;
 
+import com.zerobase.reservation.market.entity.MarketEntity;
 import com.zerobase.reservation.market.model.MarketAdd;
 import com.zerobase.reservation.market.service.MarketService;
 import lombok.RequiredArgsConstructor;

@@ -1,4 +1,4 @@
-package com.zerobase.reservation.market.entity;
+package com.zerobase.reservation.customer.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

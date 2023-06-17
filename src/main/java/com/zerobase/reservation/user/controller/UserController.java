@@ -1,50 +1,34 @@
 package com.zerobase.reservation.user.controller;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
-import com.zerobase.reservation.user.entity.UserEntity;
-import com.zerobase.reservation.user.exception.ExistsEmailException;
-import com.zerobase.reservation.user.exception.PasswordNotMatchException;
-import com.zerobase.reservation.user.exception.UserNotFoundException;
-import com.zerobase.reservation.user.model.ResponseError;
 import com.zerobase.reservation.user.model.UserInput;
 import com.zerobase.reservation.user.model.UserLogin;
 import com.zerobase.reservation.user.model.UserLoginToken;
 import com.zerobase.reservation.user.repository.UserRepository;
-import com.zerobase.reservation.util.PasswordUtils;
-import lombok.AllArgsConstructor;
+import com.zerobase.reservation.user.service.UserService;
+import com.zerobase.reservation.util.ResponseMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.validation.Errors;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
 public class UserController {
 
     private final UserRepository userRepository;
-    private final PasswordUtils passwordUtils;
+    private final UserService userService;
 
-    /**
-     * 패스워드 암호화 메소드
-     * @param password 암호화 할 패스워드
-     * @return 복호화 된 패스워드 출력
-     */
-    private String getEncryptPassword(String password) {
-        BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
-        return bCryptPasswordEncoder.encode(password);
-    }
 
     /**
      * 일반 유저 회원가입 API
@@ -52,29 +36,8 @@ public class UserController {
      */
     @PostMapping("/api/user/register")
     public ResponseEntity<?> register(@RequestBody @Valid UserInput userInput, Errors errors) {
-        List<ResponseError> responseErrorList = new ArrayList<>();
-        if (errors.hasErrors()) {
-            errors.getAllErrors().stream().forEach((e) -> {
-                responseErrorList.add(ResponseError.of((FieldError) e));
-            });
-            return new ResponseEntity<>(responseErrorList, HttpStatus.BAD_REQUEST);
-        }
-
-        if(userRepository.countByEmail(userInput.getEmail()) > 0) {
-            throw new ExistsEmailException("이미 존재하는 이메일입니다.");
-        }
-
-        String encryptPassword = getEncryptPassword(userInput.getPassword());
-
-        UserEntity user = UserEntity.builder()
-                .email(userInput.getEmail())
-                .password(encryptPassword)
-                .userName(userInput.getUserName())
-                .partner("user")
-                .build();
-        userRepository.save(user);
-
-        return ResponseEntity.ok().build();
+        ResponseEntity register = userService.setRegister(userInput, errors);
+        return ResponseEntity.ok().body(ResponseMessage.success(register));
     }
 
     /**
@@ -84,30 +47,8 @@ public class UserController {
      */
     @PostMapping("/api/user/register/partner")
     public ResponseEntity<?> registerPartner(@RequestBody @Valid UserInput userInput, Errors errors) {
-
-        List<ResponseError> responseErrorList = new ArrayList<>();
-        if (errors.hasErrors()) {
-            errors.getAllErrors().stream().forEach((e) -> {
-                responseErrorList.add(ResponseError.of((FieldError) e));
-            });
-            return new ResponseEntity<>(responseErrorList, HttpStatus.BAD_REQUEST);
-        }
-
-        if(userRepository.countByEmail(userInput.getEmail()) > 0) {
-            throw new ExistsEmailException("이미 존재하는 이메일입니다.");
-        }
-
-        String encryptPassword = getEncryptPassword(userInput.getPassword());
-
-        UserEntity user = UserEntity.builder()
-                .email(userInput.getEmail())
-                .password(encryptPassword)
-                .userName(userInput.getUserName())
-                .partner("partner")
-                .build();
-        userRepository.save(user);
-
-        return ResponseEntity.ok().build();
+        ResponseEntity partnerRegister = userService.setPartnerRegister(userInput, errors);
+        return ResponseEntity.ok().body(ResponseMessage.success(partnerRegister));
     }
 
     /**
@@ -116,34 +57,28 @@ public class UserController {
      * @return 으로 JWT 토큰 발급
      */
     @PostMapping("/api/user/login")
-    public ResponseEntity<?> createToken(@RequestBody @Valid UserLogin userLogin, Errors errors) {
-        List<ResponseError> responseErrorList = new ArrayList<>();
-        if (errors.hasErrors()) {
-            errors.getAllErrors().stream().forEach((e) -> {
-                responseErrorList.add(ResponseError.of((FieldError) e));
-            });
-            return new ResponseEntity<>(responseErrorList, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<?> login(@RequestBody @Valid UserLogin userLogin, Errors errors) {
+        ResponseEntity tokenResponse = userService.getToken(userLogin, errors);
+        if (tokenResponse.getStatusCode() != HttpStatus.OK) {
+            return tokenResponse;
         }
 
-        UserEntity user = (UserEntity) userRepository.findByEmail(userLogin.getEmail()).orElseThrow(() -> new UserNotFoundException("사용자 정보가 없습니다."));
+        String token = ((UserLoginToken) tokenResponse.getBody()).getToken();
 
-        if (!PasswordUtils.equalPassword(userLogin.getPassword(), user.getPassword())) {
-            throw new PasswordNotMatchException("비밀번호가 일치하지 않습니다.");
+
+        // 토큰을 사용하여 인증 수행
+        try {
+            // 토큰을 이용하여 인증 객체 생성
+            Authentication authentication = userService.getAuthentication(token);
+
+            // 인증 객체를 SecurityContextHolder에 설정
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            // 로그인 성공 응답 반환
+            return ResponseEntity.ok().body(ResponseMessage.success("Login successful"));
+        } catch (AuthenticationException e) {
+            // 토큰 기반 인증 실패
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ResponseMessage.fail("Invalid token"));
         }
-
-        LocalDateTime expiredDateTime = LocalDateTime.now().plusMonths(1);
-
-        Date expairedDate = java.sql.Timestamp.valueOf(expiredDateTime);
-
-        String token = JWT.create()
-                .withExpiresAt(expairedDate)
-                .withClaim("user_id", user.getId())
-                .withClaim("partner", user.getPartner())
-                .withSubject(user.getUserName())
-                .withIssuer(user.getEmail())
-                .sign(Algorithm.HMAC512("geronimo".getBytes()));
-
-        return ResponseEntity.ok().body(UserLoginToken.builder().token(token).build());
     }
-
 }
