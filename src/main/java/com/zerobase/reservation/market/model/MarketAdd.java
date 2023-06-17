@@ -17,7 +17,5 @@ public class MarketAdd {
     @NotBlank
     private String marketDesc;
     @NotBlank
-    private String marketX;
-    @NotBlank
-    private String marketY;
+    private String address;
 }
