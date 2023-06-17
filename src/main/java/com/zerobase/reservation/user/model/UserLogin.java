@@ -13,15 +13,11 @@ import javax.validation.constraints.Size;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class UserInput {
+public class UserLogin {
     @Email
     @NotBlank
     private String email;
     @NotBlank
-    @Size(min = 4, max = 20)
     private String password;
-    @NotBlank
-    @Size(min = 2, max = 20)
-    private String userName;
 
 }

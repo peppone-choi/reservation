@@ -17,8 +17,10 @@ public class UserEntity {
 
     private String email;
 
+    private String userName;
+
     private String password;
 
-    private boolean partner;
+    private String partner;
 
 }
