@@ -15,5 +15,5 @@ public class UserDto {
     private Long id;
     private String email;
     private String password;
-    private Authority partner;
+    private String partner;
 }
