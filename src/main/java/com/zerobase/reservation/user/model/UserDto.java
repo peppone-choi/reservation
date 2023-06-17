@@ -1,7 +1,6 @@
 package com.zerobase.reservation.user.model;
 
 import com.zerobase.reservation.user.entity.UserEntity;
-import com.zerobase.reservation.user.model.constants.Authority;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
