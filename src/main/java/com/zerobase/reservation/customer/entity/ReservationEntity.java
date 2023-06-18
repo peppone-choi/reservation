@@ -30,4 +30,7 @@ public class ReservationEntity {
     private String reservationPhone;
 
     private boolean approve;
+
+    private boolean arrive;
+
 }

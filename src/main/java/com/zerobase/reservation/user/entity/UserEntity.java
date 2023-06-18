@@ -1,6 +1,5 @@
 package com.zerobase.reservation.user.entity;
 
-import com.zerobase.reservation.user.model.constants.Authority;
 import lombok.*;
 
 import javax.persistence.*;
