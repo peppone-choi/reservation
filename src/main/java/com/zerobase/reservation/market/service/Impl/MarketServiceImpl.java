@@ -6,7 +6,9 @@ import com.zerobase.reservation.market.entity.MarketEntity;
 import com.zerobase.reservation.market.model.MarketAdd;
 import com.zerobase.reservation.market.repository.MarketRepository;
 import com.zerobase.reservation.market.service.MarketService;
+import com.zerobase.reservation.util.ResponseMessage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,7 @@ public class MarketServiceImpl implements MarketService {
         MarketEntity market = MarketEntity.builder()
                 .marketName(marketAdd.getMarketName())
                 .marketDesc(marketAdd.getMarketDesc())
+                .marketAddress(marketAdd.getMarketAddress())
 //                .marketX()
 //                .marketY()
                 .build();
@@ -87,11 +90,11 @@ public class MarketServiceImpl implements MarketService {
 
         if (reservation.getReserveTime().isAfter(LocalDateTime.now().minusMinutes(10))) {
             reservationRepository.delete(reservation);
-            return ResponseEntity.ok().body("예약 시간 10분 전에 들어오지 않아 예약이 취소되었습니다. 자세한 사항은 매장에 문의하세요.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ResponseMessage.fail("예약 시간 10분 전에 들어오지 않아 예약이 취소되었습니다. 자세한 사항은 매장에 문의하세요."));
         }
 
         reservation.setArrive(true);
-        return ResponseEntity.ok().body(reservation);
+        return ResponseEntity.ok().body(ResponseMessage.success("예약이 성공하였습니다\n" + reservation));
     }
 
 

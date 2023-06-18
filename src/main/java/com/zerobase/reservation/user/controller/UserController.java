@@ -58,27 +58,18 @@ public class UserController {
      */
     @PostMapping("/api/user/login")
     public ResponseEntity<?> login(@RequestBody @Valid UserLogin userLogin, Errors errors) {
-        ResponseEntity tokenResponse = userService.getToken(userLogin, errors);
+        ResponseEntity<?> tokenResponse = userService.getToken(userLogin, errors);
         if (tokenResponse.getStatusCode() != HttpStatus.OK) {
             return tokenResponse;
         }
 
         String token = ((UserLoginToken) tokenResponse.getBody()).getToken();
 
-
-        // 토큰을 사용하여 인증 수행
         try {
-            // 토큰을 이용하여 인증 객체 생성
-            Authentication authentication = userService.getAuthentication(token);
-
-            // 인증 객체를 SecurityContextHolder에 설정
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-
-            // 로그인 성공 응답 반환
-            return ResponseEntity.ok().body(ResponseMessage.success("Login successful"));
+            userService.authenticateUserWithToken(token);
+            return ResponseEntity.ok().body(ResponseMessage.success("로그인이 정상적으로 되었습니다."));
         } catch (AuthenticationException e) {
-            // 토큰 기반 인증 실패
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ResponseMessage.fail("Invalid token"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ResponseMessage.fail("부적합한 토큰입니다."));
         }
     }
 }

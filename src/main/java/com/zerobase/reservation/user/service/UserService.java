@@ -15,5 +15,5 @@ public interface UserService {
 
     ResponseEntity<?> getToken(UserLogin userLogin, Errors errors);
 
-    Authentication getAuthentication(String token);
+    Authentication authenticateUserWithToken(String token);
 }

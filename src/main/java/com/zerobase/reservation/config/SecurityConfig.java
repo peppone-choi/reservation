@@ -23,13 +23,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf().disable()
                 .authorizeRequests()
-                .antMatchers("/api/market/**").hasRole("partner")
-                .antMatchers("/api/customer/**").hasAnyRole("user", "partner")
+                .antMatchers("/api/market/**").hasRole("PARTNER")
+                .antMatchers("/api/customer/**").hasAnyRole("USER", "PARTNER")
                 .anyRequest().permitAll()
                 .and()
                 .exceptionHandling()
                 .accessDeniedHandler((request, response, ex) -> {
-                    response.sendError(HttpStatus.FORBIDDEN.value(), "Access Denied");
+                    response.sendError(HttpStatus.FORBIDDEN.value(), "접속이 거부되었습니다.");
                 })
                 .and()
                 .addFilterBefore(new JwtTokenFilter(jwtUtils, userDetailsService), UsernamePasswordAuthenticationFilter.class);

@@ -18,14 +18,16 @@ import javax.persistence.Id;
 public class MarketEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private long id;
 
     private String marketName;
 
     private String marketDesc;
 
-    private String marketX;
+    private String marketAddress;
 
-    private String marketY;
+    private double marketX;
+
+    private double marketY;
 
 }

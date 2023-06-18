@@ -3,9 +3,7 @@ package com.zerobase.reservation.user.service.Impl;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.zerobase.reservation.user.entity.UserEntity;
-import com.zerobase.reservation.user.exception.ExistsEmailException;
-import com.zerobase.reservation.user.exception.PasswordNotMatchException;
-import com.zerobase.reservation.user.exception.UserNotFoundException;
+import com.zerobase.reservation.user.exception.*;
 import com.zerobase.reservation.user.model.ResponseError;
 import com.zerobase.reservation.user.model.UserInput;
 import com.zerobase.reservation.user.model.UserLogin;
@@ -36,6 +34,7 @@ import org.springframework.validation.FieldError;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -104,38 +103,44 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ResponseEntity getToken(UserLogin userLogin, Errors errors) {
-        List<ResponseError> responseErrorList = new ArrayList<>();
+    public ResponseEntity<?> getToken(UserLogin userLogin, Errors errors) {
         if (errors.hasErrors()) {
-            errors.getAllErrors().stream().forEach((e) -> {
-                responseErrorList.add(ResponseError.of((FieldError) e));
-            });
+            List<ResponseError> responseErrorList = errors.getAllErrors()
+                    .stream()
+                    .map(error -> ResponseError.of((FieldError) error))
+                    .collect(Collectors.toList());
             return new ResponseEntity<>(responseErrorList, HttpStatus.BAD_REQUEST);
         }
 
-        UserEntity user = (UserEntity) userRepository.findByEmail(userLogin.getEmail()).orElseThrow(() -> new UserNotFoundException("사용자 정보가 없습니다."));
+        UserEntity user = (UserEntity) userRepository.findByEmail(userLogin.getEmail())
+                .orElseThrow(() -> new UserNotFoundException("사용자 정보가 없습니다."));
 
         if (!PasswordUtils.equalPassword(userLogin.getPassword(), user.getPassword())) {
             throw new PasswordNotMatchException("비밀번호가 일치하지 않습니다.");
         }
 
         LocalDateTime expiredDateTime = LocalDateTime.now().plusMonths(1);
+        Date expirationDate = java.sql.Timestamp.valueOf(expiredDateTime);
 
-        Date expairedDate = java.sql.Timestamp.valueOf(expiredDateTime);
+        String token = generateToken(user, expirationDate);
 
+        return ResponseEntity.ok().body(UserLoginToken.builder().token(token).build());
+    }
+
+    private String generateToken(UserEntity user, Date expirationDate) {
         String token = JWT.create()
-                .withExpiresAt(expairedDate)
+                .withExpiresAt(expirationDate)
                 .withClaim("user_id", user.getId())
                 .withClaim("partner", user.getPartner())
                 .withSubject(user.getUserName())
                 .withIssuer(user.getEmail())
                 .sign(Algorithm.HMAC512("geronimo".getBytes()));
 
-        return ResponseEntity.ok().body(UserLoginToken.builder().token(token).build());
+        return token;
     }
 
     @Override
-    public Authentication getAuthentication(String token) {
+    public Authentication authenticateUserWithToken(String token) {
         try {
             Claims claims = Jwts.parser()
                     .setSigningKey("geronimo")
@@ -145,16 +150,16 @@ public class UserServiceImpl implements UserService {
             String userId = claims.get("user_id", String.class);
             String partner = claims.get("partner", String.class);
             String username = claims.getSubject();
-            Collection<? extends GrantedAuthority> authorities = Arrays.asList(new SimpleGrantedAuthority("ROLE_" + partner.toUpperCase()));
+            Collection<? extends GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + partner.toUpperCase()));
 
-            return new UsernamePasswordAuthenticationToken(userId, null, authorities);
+            Authentication authentication = new UsernamePasswordAuthenticationToken(userId, null, authorities);
+            return authentication;
         } catch (ExpiredJwtException e) {
-            // Handle expired token exception
+            throw new TokenExpiredException("토큰이 만료되었습니다.");
         } catch (Exception e) {
-            // Handle other token-related exceptions
+            throw new InvalidTokenException("유효하지 않은 토큰입니다.");
         }
-
-        return null; // Return null if token is invalid or parsing fails
     }
+
 
 }

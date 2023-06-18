@@ -1,4 +1,4 @@
-package com.zerobase.reservation.market.model;
+package com.zerobase.reservation.customer.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,14 +8,14 @@ import lombok.NoArgsConstructor;
 import javax.validation.constraints.NotBlank;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class MarketAdd {
+@AllArgsConstructor
+@NoArgsConstructor
+public class AddReview {
     @NotBlank
-    private String marketName;
+    private Long marketId;
     @NotBlank
-    private String marketDesc;
+    private String reviewSubject;
     @NotBlank
-    private String marketAddress;
+    private String reviewDesc;
 }
