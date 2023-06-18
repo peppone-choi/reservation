@@ -8,7 +8,5 @@ import java.util.List;
 
 @Repository
 public interface MarketRepository extends JpaRepository<MarketEntity, Long> {
-    List<MarketEntity> findAllByMarketNameContaining(String name);
-
-    MarketEntity findById(long id);
+   MarketEntity findById(long id);
 }

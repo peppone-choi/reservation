@@ -20,8 +20,8 @@ public class ApiCustomerController {
     private final CustomerService customerService;
 
     @GetMapping("/api/customer/")
-    public List<MarketEntity> getMarketList(@RequestBody String name) {
-        return customerService.getMarketList(name);
+    public List<MarketEntity> getMarketList() {
+        return customerService.getMarketList();
     }
 
     @GetMapping("/api/customer/{id}")
@@ -52,6 +52,11 @@ public class ApiCustomerController {
     @GetMapping("/api/review/{id}")
     public ReviewEntity findReviewById(@PathVariable long id) {
         return customerService.findReviewById(id);
+    }
+
+    @PatchMapping("/api/kiosk/{id}")
+    public ResponseEntity<?> enterKiosk(@PathVariable long id) {
+        return customerService.enterKiosk(id);
     }
 
 }

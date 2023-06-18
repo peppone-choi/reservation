@@ -1,38 +1,38 @@
 package com.zerobase.reservation.user.service.Impl;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
 import com.zerobase.reservation.user.entity.UserEntity;
 import com.zerobase.reservation.user.exception.*;
+import com.zerobase.reservation.user.model.LoginResponse;
 import com.zerobase.reservation.user.model.ResponseError;
 import com.zerobase.reservation.user.model.UserInput;
 import com.zerobase.reservation.user.model.UserLogin;
-import com.zerobase.reservation.user.model.UserLoginToken;
 import com.zerobase.reservation.user.repository.UserRepository;
 import com.zerobase.reservation.user.service.UserService;
+import com.zerobase.reservation.util.JWTUtils;
 import com.zerobase.reservation.util.PasswordUtils;
 import com.zerobase.reservation.util.ResponseMessage;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.Errors;
 import org.springframework.validation.FieldError;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -43,6 +43,9 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordUtils passwordUtils;
 
+    private static final String AUTHORIZATION_HEADER_PREFIX = "Bearer ";
+    private final JWTUtils jwtUtils;
+    private final AuthenticationManager authenticationManager;
     private String getEncryptPassword(String password) {
         BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
         return bCryptPasswordEncoder.encode(password);
@@ -102,64 +105,60 @@ public class UserServiceImpl implements UserService {
         return ResponseEntity.ok().body(user);
     }
 
-    @Override
-    public ResponseEntity<?> getToken(UserLogin userLogin, Errors errors) {
+    public ResponseEntity<?> login(UserLogin userLogin, Errors errors) {
         if (errors.hasErrors()) {
             List<ResponseError> responseErrorList = errors.getAllErrors()
                     .stream()
                     .map(error -> ResponseError.of((FieldError) error))
                     .collect(Collectors.toList());
-            return new ResponseEntity<>(responseErrorList, HttpStatus.BAD_REQUEST);
+            LoginResponse loginResponse = new LoginResponse(responseErrorList.toString());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(loginResponse);
         }
 
-        UserEntity user = (UserEntity) userRepository.findByEmail(userLogin.getEmail())
-                .orElseThrow(() -> new UserNotFoundException("사용자 정보가 없습니다."));
-
-        if (!PasswordUtils.equalPassword(userLogin.getPassword(), user.getPassword())) {
-            throw new PasswordNotMatchException("비밀번호가 일치하지 않습니다.");
-        }
-
-        LocalDateTime expiredDateTime = LocalDateTime.now().plusMonths(1);
-        Date expirationDate = java.sql.Timestamp.valueOf(expiredDateTime);
-
-        String token = generateToken(user, expirationDate);
-
-        return ResponseEntity.ok().body(UserLoginToken.builder().token(token).build());
-    }
-
-    private String generateToken(UserEntity user, Date expirationDate) {
-        String token = JWT.create()
-                .withExpiresAt(expirationDate)
-                .withClaim("user_id", user.getId())
-                .withClaim("partner", user.getPartner())
-                .withSubject(user.getUserName())
-                .withIssuer(user.getEmail())
-                .sign(Algorithm.HMAC512("geronimo".getBytes()));
-
-        return token;
-    }
-
-    @Override
-    public Authentication authenticateUserWithToken(String token) {
         try {
-            Claims claims = Jwts.parser()
-                    .setSigningKey("geronimo")
-                    .parseClaimsJws(token)
-                    .getBody();
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(userLogin.getEmail(), userLogin.getPassword())
+            );
 
-            String userId = claims.get("user_id", String.class);
-            String partner = claims.get("partner", String.class);
-            String username = claims.getSubject();
-            Collection<? extends GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + partner.toUpperCase()));
+            // 인증 성공 처리
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            Authentication authentication = new UsernamePasswordAuthenticationToken(userId, null, authorities);
-            return authentication;
-        } catch (ExpiredJwtException e) {
-            throw new TokenExpiredException("토큰이 만료되었습니다.");
-        } catch (Exception e) {
-            throw new InvalidTokenException("유효하지 않은 토큰입니다.");
+            UserEntity user = userRepository.findByEmail(userLogin.getEmail())
+                    .orElseThrow(() -> new UsernameNotFoundException("이메일에 해당하는 사용자를 찾을 수 없습니다: " + userLogin.getEmail()));
+
+            String token = generateToken(user);
+            LoginResponse loginResponse = new LoginResponse("로그인이 정상적으로 되었습니다.");
+            HttpHeaders headers = createAuthorizationHeader(token, user.getPartner());
+            return ResponseEntity.ok().headers(headers).body(loginResponse);
+
+        } catch (AuthenticationException e) {
+            // 인증 실패 처리
+            LoginResponse loginResponse = new LoginResponse("인증에 실패하였습니다.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(loginResponse);
         }
     }
 
+    private String generateToken(UserEntity user) {
+        Date now = new Date();
+        Date expiration = new Date(now.getTime() + jwtUtils.getExpirationMs());
+
+        Claims claims = Jwts.claims().setSubject(user.getEmail());
+        claims.put("userId", user.getId());
+        claims.put("roles", user.getPartner());
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setIssuedAt(now)
+                .setExpiration(expiration)
+                .signWith(SignatureAlgorithm.HS256, jwtUtils.getSecretKey())
+                .compact();
+    }
+
+    private HttpHeaders createAuthorizationHeader(String token, String partner) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.AUTHORIZATION, AUTHORIZATION_HEADER_PREFIX + token);
+        headers.add("partner", partner);
+        return headers;
+    }
 
 }

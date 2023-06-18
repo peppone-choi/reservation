@@ -13,7 +13,7 @@ import java.util.List;
 public interface CustomerService {
     ResponseEntity addReview(AddReview addReview);
 
-    List<MarketEntity> getMarketList(String name);
+    List<MarketEntity> getMarketList();
 
     MarketEntity getMarketInfo(long id);
 
@@ -24,4 +24,6 @@ public interface CustomerService {
     List<ReviewEntity> findByMarketId(long id);
 
     ReviewEntity findReviewById(long id);
+
+    ResponseEntity<?> enterKiosk(long id);
 }
