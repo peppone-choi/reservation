@@ -16,5 +16,4 @@ public interface MarketService {
 
     ResponseEntity<?> deny(long id);
 
-    ResponseEntity<?> enterKiosk(long id);
 }

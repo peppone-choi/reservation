@@ -16,16 +16,14 @@ public class JWTUtils {
 
     public boolean validateToken(String token) {
         try {
-            byte[] secretKeyBytes = KEY.getBytes(StandardCharsets.UTF_8);
-            Key key = Keys.hmacShaKeyFor(secretKeyBytes);
+            Key key = Keys.hmacShaKeyFor(KEY.getBytes(StandardCharsets.UTF_8));
 
-            Jws<Claims> claimsJws = Jwts.parser()
+            Jwts.parser()
                     .setSigningKey(key)
                     .parseClaimsJws(token);
 
             return true;
         } catch (JwtException | IllegalArgumentException e) {
-            // 유효하지 않은 토큰 또는 파싱 오류인 경우 false를 반환
             return false;
         }
     }
@@ -39,5 +37,14 @@ public class JWTUtils {
                 .parseClaimsJws(token)
                 .getBody();
 
+    }
+
+    public long getExpirationMs() {
+        long expirationMs = 3000;
+        return expirationMs;
+    }
+
+    public String getSecretKey() {
+        return KEY;
     }
 }

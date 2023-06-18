@@ -34,9 +34,4 @@ public class ApiMarketController {
         return marketService.deny(id);
     }
 
-
-    @PatchMapping("/api/kiosk/{id}")
-    public ResponseEntity<?> enterKiosk(@PathVariable long id) {
-        return marketService.enterKiosk(id);
-    }
 }

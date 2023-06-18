@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class AddReservation {
     private long marketId;
-    private LocalDateTime reserveDate;
     private LocalDateTime reserveTime;
     private String reservationPhone;
 }

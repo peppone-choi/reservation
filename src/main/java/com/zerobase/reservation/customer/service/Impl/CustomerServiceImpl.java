@@ -9,10 +9,13 @@ import com.zerobase.reservation.customer.repository.ReviewRepository;
 import com.zerobase.reservation.customer.service.CustomerService;
 import com.zerobase.reservation.market.entity.MarketEntity;
 import com.zerobase.reservation.market.repository.MarketRepository;
+import com.zerobase.reservation.util.ResponseMessage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -25,8 +28,8 @@ public class CustomerServiceImpl implements CustomerService {
 
 
     @Override
-    public List<MarketEntity> getMarketList(String name) {
-        return marketRepository.findAllByMarketNameContaining(name);
+    public List<MarketEntity> getMarketList() {
+        return marketRepository.findAll();
     }
 
     @Override
@@ -39,7 +42,6 @@ public class CustomerServiceImpl implements CustomerService {
 
         ReservationEntity reservation = ReservationEntity.builder()
                 .marketId(addReservation.getMarketId())
-                .reserveDate(addReservation.getReserveDate())
                 .reserveTime(addReservation.getReserveTime())
                 .reservationPhone(addReservation.getReservationPhone())
                 .approve(false)
@@ -64,6 +66,23 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public ReviewEntity findReviewById(long id) {
         return reviewRepository.findById(id);
+    }
+
+    @Override
+    public ResponseEntity<?> enterKiosk(long id) {
+        ReservationEntity reservation = reservationRepository.findById(id);
+
+        if (reservation == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (reservation.getReserveTime().isAfter(LocalDateTime.now().minusMinutes(10))) {
+            reservationRepository.delete(reservation);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ResponseMessage.fail("예약 시간 10분 전에 들어오지 않아 예약이 취소되었습니다. 자세한 사항은 매장에 문의하세요."));
+        }
+
+        reservation.setArrive(true);
+        return ResponseEntity.ok().body(ResponseMessage.success("예약이 성공하였습니다\n" + reservation));
     }
 
     @Override
