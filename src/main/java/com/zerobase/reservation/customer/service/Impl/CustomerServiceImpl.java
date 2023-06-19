@@ -26,7 +26,6 @@ public class CustomerServiceImpl implements CustomerService {
     private final ReservationRepository reservationRepository;
     private final ReviewRepository reviewRepository;
 
-
     @Override
     public List<MarketEntity> getMarketList() {
         return marketRepository.findAll();
@@ -37,6 +36,12 @@ public class CustomerServiceImpl implements CustomerService {
         return marketRepository.findById(id);
     }
 
+    /**
+     * 주문예약 메소드의 구현체.
+     * 미승인인 채로 DB에 등록.
+     * @param addReservation
+     * @return
+     */
     @Override
     public ResponseEntity<?> addReservation(AddReservation addReservation) {
 
@@ -68,12 +73,23 @@ public class CustomerServiceImpl implements CustomerService {
         return reviewRepository.findById(id);
     }
 
+    /**
+     * 키오스크 입장 메소드의 구현체
+     * 예약사항이 없거나, 입장 일시가 10분 전이 아니거나, 거절되거나(예약이 삭제됨), 주문 예약이 승인 되지 않을 경우 예외 발생.
+     * 위의 제약이 없는 경우, 입장 확인 사실이 DB에 저장.
+     * @param id
+     * @return
+     */
     @Override
     public ResponseEntity<?> enterKiosk(long id) {
         ReservationEntity reservation = reservationRepository.findById(id);
 
         if (reservation == null) {
             return ResponseEntity.notFound().build();
+        }
+
+        if (reservation.isApprove() == false) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ResponseMessage.fail("주문 예약이 승인되지 않았습니다."));
         }
 
         if (reservation.getReserveTime().isBefore(LocalDateTime.now().minusMinutes(10))) {

@@ -1,7 +1,7 @@
 package com.zerobase.reservation.user.service.Impl;
 
 import com.zerobase.reservation.user.entity.UserEntity;
-import com.zerobase.reservation.user.exception.*;
+import com.zerobase.reservation.user.exception.ExistsEmailException;
 import com.zerobase.reservation.user.model.LoginResponse;
 import com.zerobase.reservation.user.model.ResponseError;
 import com.zerobase.reservation.user.model.UserInput;
@@ -9,10 +9,8 @@ import com.zerobase.reservation.user.model.UserLogin;
 import com.zerobase.reservation.user.repository.UserRepository;
 import com.zerobase.reservation.user.service.UserService;
 import com.zerobase.reservation.util.JWTUtils;
-import com.zerobase.reservation.util.PasswordUtils;
 import com.zerobase.reservation.util.ResponseMessage;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.RequiredArgsConstructor;
@@ -23,17 +21,16 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.Errors;
 import org.springframework.validation.FieldError;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,16 +38,22 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final PasswordUtils passwordUtils;
 
     private static final String AUTHORIZATION_HEADER_PREFIX = "Bearer ";
     private final JWTUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
+
     private String getEncryptPassword(String password) {
         BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
         return bCryptPasswordEncoder.encode(password);
     }
 
+    /**
+     * 회원가입 서비스의 구현체.
+     * @param userInput
+     * @param errors
+     * @return
+     */
     @Override
     public ResponseEntity setRegister(UserInput userInput, Errors errors) {
         List<ResponseError> responseErrorList = new ArrayList<>();
@@ -58,7 +61,7 @@ public class UserServiceImpl implements UserService {
             errors.getAllErrors().stream().forEach((e) -> {
                 responseErrorList.add(ResponseError.of((FieldError) e));
             });
-            return new ResponseEntity<>(ResponseMessage.fail("이미 접속 제한이 해제된 사용자 입니다."), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(ResponseMessage.fail("회원 가입에 문제가 있습니다."), HttpStatus.BAD_REQUEST);
         }
 
         if(userRepository.countByEmail(userInput.getEmail()) > 0) {
@@ -78,6 +81,12 @@ public class UserServiceImpl implements UserService {
         return ResponseEntity.ok().body(user);
     }
 
+    /**
+     * 파트너 회원 가입 서비스의 구현체.
+     * @param userInput
+     * @param errors
+     * @return
+     */
     @Override
     public ResponseEntity setPartnerRegister(UserInput userInput, Errors errors) {
         List<ResponseError> responseErrorList = new ArrayList<>();
@@ -105,6 +114,14 @@ public class UserServiceImpl implements UserService {
         return ResponseEntity.ok().body(user);
     }
 
+    /**
+     * 로그인 서비스의 구현체.
+     * 토큰을 확인하여 토큰의 헤더에 알맞는 권한을 부여한다
+     * 권한은 partner와 user로 이루어져있다.
+     * @param userLogin
+     * @param errors
+     * @return
+     */
     public ResponseEntity<?> login(UserLogin userLogin, Errors errors) {
         if (errors.hasErrors()) {
             List<ResponseError> responseErrorList = errors.getAllErrors()
@@ -160,5 +177,4 @@ public class UserServiceImpl implements UserService {
         headers.add("partner", partner);
         return headers;
     }
-
 }

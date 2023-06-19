@@ -1,8 +1,8 @@
 package com.zerobase.reservation.util;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +14,11 @@ public class JWTUtils {
 
     private static final String KEY = "geronimo";
 
+    /**
+     * 토큰 생성 메소드
+     * @param token
+     * @return
+     */
     public boolean validateToken(String token) {
         try {
             Key key = Keys.hmacShaKeyFor(KEY.getBytes(StandardCharsets.UTF_8));
@@ -28,6 +33,11 @@ public class JWTUtils {
         }
     }
 
+    /**
+     * 토큰에서 claim 추출
+     * @param token
+     * @return
+     */
     public Claims extractClaims(String token) {
         byte[] secretKeyBytes = KEY.getBytes(StandardCharsets.UTF_8);
         Key key = Keys.hmacShaKeyFor(secretKeyBytes);
@@ -39,8 +49,9 @@ public class JWTUtils {
 
     }
 
+
     public long getExpirationMs() {
-        long expirationMs = 3000;
+        long expirationMs = 86400000; // 하루
         return expirationMs;
     }
 

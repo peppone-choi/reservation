@@ -1,42 +1,17 @@
 package com.zerobase.reservation.user.controller;
 
-import com.zerobase.reservation.user.entity.UserEntity;
-import com.zerobase.reservation.user.exception.InvalidTokenException;
-import com.zerobase.reservation.user.exception.PasswordNotMatchException;
-import com.zerobase.reservation.user.exception.TokenExpiredException;
-import com.zerobase.reservation.user.model.*;
-import com.zerobase.reservation.user.repository.UserRepository;
+import com.zerobase.reservation.user.model.UserInput;
+import com.zerobase.reservation.user.model.UserLogin;
 import com.zerobase.reservation.user.service.UserService;
-import com.zerobase.reservation.util.JWTUtils;
-import com.zerobase.reservation.util.PasswordUtils;
 import com.zerobase.reservation.util.ResponseMessage;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.Errors;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor

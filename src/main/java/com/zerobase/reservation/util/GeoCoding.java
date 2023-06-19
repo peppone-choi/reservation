@@ -1,6 +1,5 @@
 package com.zerobase.reservation.util;
 
-import lombok.experimental.UtilityClass;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -15,6 +14,13 @@ import java.nio.charset.StandardCharsets;
 
 @Component
 public class GeoCoding {
+    /**
+     * 지오코딩을 통한 주소 -> 좌표 변환 메소드
+     * vworld Open API를 사용.
+     * https://www.vworld.kr/dev/v4dv_geocoderguide2_s001.do
+     * @param addr 좌표를 변환할 주소 (도로명 주소 사용)
+     * @return 반환된 좌표값 : double 형태의 배열
+     */
     public double[] geoPoint(String addr) {
         String apikey = "79EA3263-C9B7-341A-BEE5-00E50ABC1EA7";
         String searchType = "road";

@@ -28,6 +28,14 @@ public class JwtTokenFilter extends UsernamePasswordAuthenticationFilter {
     private final JWTUtils jwtUtils;
     private final UserDetailsService userDetailsService;
 
+    /**
+     * 인증 시도 메소드
+     * @param request from which to extract parameters and perform the authentication
+     * @param response the response, which may be needed if the implementation has to do a
+     * redirect as part of a multi-stage authentication process (such as OpenID).
+     * @return
+     * @throws AuthenticationException
+     */
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
             throws AuthenticationException {
@@ -48,16 +56,22 @@ public class JwtTokenFilter extends UsernamePasswordAuthenticationFilter {
 
             response.addHeader("Authorization", "Bearer " + token);
 
-            // 로그 추가
-            logger.info("토큰 분석 및 인증 완료: " + userDetails.getUsername() + ", Authorities: " + authorities);
-
             return new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
         }
 
-        throw new AccessDeniedException("Access Denied");
+        throw new AccessDeniedException("접속 불가");
     }
 
-
+    /**
+     * 인증 성공 시 권한 발급
+     * @param request
+     * @param response
+     * @param chain
+     * @param authResult the object returned from the <tt>attemptAuthentication</tt>
+     * method.
+     * @throws IOException
+     * @throws ServletException
+     */
     @Override
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response,
                                             FilterChain chain, Authentication authResult)
@@ -67,6 +81,11 @@ public class JwtTokenFilter extends UsernamePasswordAuthenticationFilter {
         chain.doFilter(request, response);
     }
 
+    /**
+     * 토큰에서 인증 정보 추출 메소드
+     * @param request
+     * @return
+     */
     private String extractToken(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {

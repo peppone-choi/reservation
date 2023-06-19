@@ -3,7 +3,6 @@ package com.zerobase.reservation.user.service;
 import com.zerobase.reservation.user.model.UserInput;
 import com.zerobase.reservation.user.model.UserLogin;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.validation.Errors;
 
 public interface UserService {

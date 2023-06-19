@@ -7,22 +7,10 @@ import com.zerobase.reservation.market.model.MarketAdd;
 import com.zerobase.reservation.market.repository.MarketRepository;
 import com.zerobase.reservation.market.service.MarketService;
 import com.zerobase.reservation.util.GeoCoding;
-import com.zerobase.reservation.util.ResponseMessage;
-import io.jsonwebtoken.io.IOException;
 import lombok.RequiredArgsConstructor;
-import org.apache.tomcat.util.json.ParseException;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -33,6 +21,11 @@ public class MarketServiceImpl implements MarketService {
     private final ReservationRepository reservationRepository;
     private final GeoCoding geoCoding;
 
+    /**
+     * 매장 등록 메소드의 구현체
+     * @param marketAdd
+     * @return
+     */
     @Override
     public ResponseEntity<?> addMarket(MarketAdd marketAdd) {
         String geoString = marketAdd.getMarketAddress().replace(" ", "");
@@ -51,11 +44,21 @@ public class MarketServiceImpl implements MarketService {
         return ResponseEntity.ok().body(market);
     }
 
+    /**
+     * 매장 별 주문 현황 획인 메소드의 구현체
+     * @param id
+     * @return
+     */
     @Override
     public List<ReservationEntity> getReservation(long id) {
         return reservationRepository.findAllByMarketId(id);
     }
 
+    /**
+     * 주문 승인 메소드의 구현체
+     * @param id
+     * @return
+     */
     @Override
     public ResponseEntity approve(long id) {
 
@@ -76,6 +79,11 @@ public class MarketServiceImpl implements MarketService {
         return ResponseEntity.ok().body(reservation);
     }
 
+    /**
+     * 주문 거절 메소드의 구현체
+     * @param id
+     * @return
+     */
     @Override
     public ResponseEntity<?> deny(long id) {
         ReservationEntity reservation = reservationRepository.findById(id);
@@ -90,9 +98,7 @@ public class MarketServiceImpl implements MarketService {
 
         reservationRepository.delete(reservation);
 
-        return ResponseEntity.ok().body("["+ id + "] 해당 주문의 승인이 정상적으로 거절되었습니다.");
+        return ResponseEntity.ok().body("["+ id + "] 해당 주문의 승인이 정상적으로 거절되었습니다. 이 주문은 데이터에서 삭제됩니다.");
     }
-
-
 
 }
